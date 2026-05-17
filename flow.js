@@ -474,7 +474,11 @@ session.brands =
 
 await sendListMessage(
   phone,
-  "Choose Brand",
+  `📱 Welcome to StockNear
+
+Find phones available near you instantly 🚀
+
+Choose Brand`,
   "Select Brand",
   brands
 );

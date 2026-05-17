@@ -3,8 +3,16 @@ function formatResults(results) {
   if (!results.length) {
 
     return (
-      "❌ No matching phones found."
-    );
+`❌ No matching phones found.
+
+Try:
+• another color
+• Any RAM
+• Any Storage
+• different model
+
+Or type your requirement again 🔍`
+);
   }
 
   let response = "";
@@ -29,23 +37,26 @@ function formatResults(results) {
       response +=
 `${index + 1}. 🏪 ${item.shopName}
 
-💰 ₹${Number(
-  item.price
-).toLocaleString("en-IN")}
-
-📦 Stock: ${item.stock}
-
 ${item.freshness}
 
 📍 ${item.location}
 
-🗺 ${item.mapsLink}
+📍 View Shop Location:
+${item.mapsLink}
 
 ━━━━━━━━━━━━
 
 `;
     }
   );
+
+  response +=
+`💡 Type:
+• restart
+• menu
+• reset
+
+to start a new search anytime.`;
 
   return response;
 }
