@@ -258,8 +258,6 @@ app.get("/send-test", async (req, res) => {
 });
 
 app.get("/webhook", (req, res) => {
-  const verifyToken =
-    "stocknear_verify";
 
   const mode =
     req.query["hub.mode"];
@@ -272,8 +270,9 @@ app.get("/webhook", (req, res) => {
 
   if (
     mode === "subscribe" &&
-    token === verifyToken
+    token === process.env.VERIFY_TOKEN
   ) {
+
     return res
       .status(200)
       .send(challenge);
