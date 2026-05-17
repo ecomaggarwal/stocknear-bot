@@ -308,14 +308,6 @@ if (
     `🤖 AI Recommendations\n\n${formatted}`
   );
 
-  await sendMessage(
-  phone,
-  "🔥 Interested in any phone?\n\nReply YES to connect with seller."
-);
-
-session.awaitingLead =
-  true;
-
 await saveSession(
   phone,
   session
@@ -431,14 +423,6 @@ if (
   phone,
   formatted
 );
-
-await sendMessage(
-  phone,
-  "🔥 Interested in any phone?\n\nReply YES to connect with seller."
-);
-
-session.awaitingLead =
-  true;
 
 session.step =
   "done";
@@ -807,14 +791,6 @@ await sendMessage(
   phone,
   formatted
 );
-
-await sendMessage(
-  phone,
-  "🔥 Interested in any phone?\n\nReply YES to connect with seller."
-);
-
-session.awaitingLead =
-  true;
 
 session.step =
   "done";
