@@ -57,10 +57,7 @@ ${item.shopPhone ? `☎️ ${item.shopPhone}` : ""}
   response +=
 `💡 Type:
 • restart
-• menu
-• reset
-
-to start a new search anytime.`;
+• stop`;
 
   return response;
 }

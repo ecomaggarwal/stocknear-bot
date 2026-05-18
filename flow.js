@@ -227,6 +227,42 @@ async function handleFlow(
   text = text.trim();
 
   if (
+  text.toLowerCase() ===
+  "stop"
+) {
+
+  session.step =
+    "stopped";
+
+  await saveSession(
+    phone,
+    session
+  );
+
+  await sendMessage(
+    phone,
+    "🛑 Chat stopped.\n\nSend Hi anytime to start again."
+  );
+
+  return;
+}
+
+if (
+  session.step === "stopped"
+) {
+
+  session.step =
+    "brand";
+
+  session.data = {};
+
+  await saveSession(
+    phone,
+    session
+  );
+}
+
+  if (
   session.awaitingLead &&
   text.toLowerCase() ===
     "yes"
