@@ -44,6 +44,8 @@ ${item.freshness}
 📍 View Shop Location:
 ${item.mapsLink}
 
+${item.shopPhone ? `☎️ ${item.shopPhone}` : ""}
+
 ━━━━━━━━━━━━
 
 `;

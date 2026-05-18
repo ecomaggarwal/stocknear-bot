@@ -92,7 +92,10 @@ if (
         row.c[12]?.v || "",
 
       mapsLink:
-        row.c[13]?.v || ""
+        row.c[13]?.v || "",
+
+      shopPhone:
+        row.c[14]?.v || ""
     }));
 
   lastFetchTime =
