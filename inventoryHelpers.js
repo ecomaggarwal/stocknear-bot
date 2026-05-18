@@ -8,7 +8,13 @@ function normalize(value) {
 }
 
 function uniqueValues(array) {
-  return [...new Set(array)];
+  return [
+    ...new Set(
+      array
+        .filter(value => value !== null && value !== undefined && value !== "")
+        .map(value => String(value).trim())
+    )
+  ];
 }
 
 async function getBrands() {
