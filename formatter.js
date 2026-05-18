@@ -46,6 +46,8 @@ ${item.mapsLink}
 
 ${item.shopPhone ? `☎️ ${item.shopPhone}` : ""}
 
+📞 Call before visiting the shop
+
 ━━━━━━━━━━━━
 
 `;
