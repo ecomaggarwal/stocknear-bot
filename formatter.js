@@ -25,13 +25,15 @@ Or type your requirement again 🔍`
 💾 ${first.ram} | ${first.storage}
 🎨 ${first.color}
 
-📍 Available at ${results.length} store(s)
+📍 Showing top ${Math.min(results.length, 10)} of ${results.length} store(s)
 
 ━━━━━━━━━━━━
 
 `;
 
-  results.forEach(
+  results
+  .slice(0, 10)
+  .forEach(
     (item, index) => {
 
       response +=
@@ -58,6 +60,11 @@ ${item.shopPhone ? `☎️ ${item.shopPhone}` : ""}
 `💡 Type:
 • restart
 • stop`;
+
+if (results.length > 10) {
+  response +=
+`\n\nShowing limited results. Use specific model/RAM/storage/color for better matches.`;
+}
 
   return response;
 }
