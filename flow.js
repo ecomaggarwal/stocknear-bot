@@ -1,14 +1,10 @@
 const {
   saveLead
-} = require(
-  "./leads"
-);
+} = require("./leads");
 
 const {
   getRecommendations
-} = require(
-  "./recommendations"
-);
+} = require("./recommendations");
 
 const {
   getBrands,
@@ -41,169 +37,98 @@ const {
   trackSearch
 } = require("./analytics");
 
-async function sendNextStep(
-  session,
-  phone,
-  sendListMessage
-) {
+const {
+  sortResultsByDistance,
+  getAreaCoordinates
+} = require("./locationHelper");
 
-  const nextStep =
-    getNextStep(
-      session.data
+const {
+  ZONES
+} = require("./areaCoordinates");
+
+// ── HELPER — Apply distance sorting if customer location exists ──────────────
+
+function applyLocationSort(results, session) {
+  if (
+    session.location &&
+    session.location.lat &&
+    session.location.lng
+  ) {
+    return sortResultsByDistance(
+      results,
+      session.location.lat,
+      session.location.lng
     );
+  }
+  return results;
+}
 
-  // DONE
+// ── HELPER — Send next guided flow step ──────────────────────────────────────
+
+async function sendNextStep(session, phone, sendListMessage) {
+
+  const nextStep = getNextStep(session.data);
 
   if (!nextStep) {
-
-    const results =
-      await searchInventory({
-        brand:
-          session.data.brand,
-
-        model:
-          session.data.model,
-
-        ram:
-          session.data.ram,
-
-        storage:
-          session.data.storage,
-
-        color:
-          session.data.color
-      });
+    const results = await searchInventory({
+      brand: session.data.brand,
+      model: session.data.model,
+      ram: session.data.ram,
+      storage: session.data.storage,
+      color: session.data.color
+    });
 
     return {
       done: true,
-      results
+      results: applyLocationSort(results, session)
     };
   }
-
-  // MODEL
 
   if (nextStep === "model") {
-
-    const models =
-      await getModels(
-        session.data.brand
-      );
-
-    session.models =
-      models;
-
-    session.step =
-      "model_select";
-
-    await sendListMessage(
-      phone,
-      "Choose Model",
-      "Select Model",
-      models
-    );
-
-    return {
-      done: false
-    };
+    const models = await getModels(session.data.brand);
+    session.models = models;
+    session.step = "model_select";
+    await sendListMessage(phone, "Choose Model", "Select Model", models);
+    return { done: false };
   }
-
-  // RAM
 
   if (nextStep === "ram") {
-
-    const ramOptions =
-      await getRam(
-        session.data.brand,
-        session.data.model
-      );
-
-    session.ramOptions =
-      ramOptions;
-
-    session.step =
-      "ram_select";
-
-    await sendListMessage(
-      phone,
-      "Choose RAM",
-      "Select RAM",
-      ramOptions
-    );
-
-    return {
-      done: false
-    };
+    const ramOptions = await getRam(session.data.brand, session.data.model);
+    session.ramOptions = ramOptions;
+    session.step = "ram_select";
+    await sendListMessage(phone, "Choose RAM", "Select RAM", ramOptions);
+    return { done: false };
   }
 
-  // STORAGE
-
-  if (
-    nextStep ===
-    "storage"
-  ) {
-
-    const storageOptions =
-      await getStorage(
-        session.data.brand,
-        session.data.model,
-        session.data.ram
-      );
-
-    session.storageOptions =
-      storageOptions;
-
-    session.step =
-      "storage_select";
-
-    await sendListMessage(
-      phone,
-      "Choose Storage",
-      "Select Storage",
-      storageOptions
+  if (nextStep === "storage") {
+    const storageOptions = await getStorage(
+      session.data.brand,
+      session.data.model,
+      session.data.ram
     );
-
-    return {
-      done: false
-    };
+    session.storageOptions = storageOptions;
+    session.step = "storage_select";
+    await sendListMessage(phone, "Choose Storage", "Select Storage", storageOptions);
+    return { done: false };
   }
 
-  // COLOR
-
-  if (
-    nextStep ===
-    "color"
-  ) {
-
-    const colorOptions =
-      await getColors(
-        session.data.brand,
-        session.data.model,
-        session.data.ram,
-        session.data.storage
-      );
-
-    session.colorOptions =
-      colorOptions;
-
-    session.step =
-      "color_select";
-
-    await sendListMessage(
-      phone,
-      "Choose Color",
-      "Select Color",
-      colorOptions
+  if (nextStep === "color") {
+    const colorOptions = await getColors(
+      session.data.brand,
+      session.data.model,
+      session.data.ram,
+      session.data.storage
     );
-
-    return {
-      done: false
-    };
+    session.colorOptions = colorOptions;
+    session.step = "color_select";
+    await sendListMessage(phone, "Choose Color", "Select Color", colorOptions);
+    return { done: false };
   }
 
-  return {
-    done: false
-  };
+  return { done: false };
 }
+
+// ── MAIN FLOW ─────────────────────────────────────────────────────────────────
 
 async function handleFlow(
   phone,
@@ -212,633 +137,439 @@ async function handleFlow(
   sendListMessage
 ) {
 
-  console.log(
-  "HANDLE FLOW STARTED"
-);
+  console.log("HANDLE FLOW STARTED");
 
-  const session =
-  await getSession(phone);
+  const session = await getSession(phone);
 
-  console.log(
-  "SESSION:",
-  session
-);
+  console.log("SESSION:", session);
 
   text = text.trim();
 
-  if (
-  text.toLowerCase() ===
-  "stop"
-) {
+  // ── STOP ──────────────────────────────────────────────────────────────────
 
-  session.step =
-    "stopped";
+  if (text.toLowerCase() === "stop") {
+    session.step = "stopped";
+    await saveSession(phone, session);
+    await sendMessage(
+      phone,
+      "🛑 Chat stopped.\n\nSend Hi anytime to start again."
+    );
+    return;
+  }
 
-  await saveSession(
-    phone,
-    session
-  );
+  if (session.step === "stopped") {
+    session.step = "zone_select";
+    session.data = {};
+    session.location = null;
+    await saveSession(phone, session);
+  }
 
-  await sendMessage(
-    phone,
-    "🛑 Chat stopped.\n\nSend Hi anytime to start again."
-  );
-
-  return;
-}
-
-if (
-  session.step === "stopped"
-) {
-
-  session.step =
-    "brand";
-
-  session.data = {};
-
-  await saveSession(
-    phone,
-    session
-  );
-}
+  // ── LEAD CAPTURE ──────────────────────────────────────────────────────────
 
   if (
-  session.awaitingLead &&
-  text.toLowerCase() ===
-    "yes"
-) {
+    session.awaitingLead &&
+    text.toLowerCase() === "yes"
+  ) {
+    await saveLead({
+      phone,
+      brand: session.data.brand,
+      model: session.data.model,
+      ram: session.data.ram,
+      storage: session.data.storage,
+      color: session.data.color
+    });
 
-  await saveLead({
-    phone,
+    session.awaitingLead = false;
+    session.step = "zone_select";
+    session.data = {};
+    session.location = null;
 
-    brand:
-      session.data.brand,
+    await saveSession(phone, session);
+    await sendMessage(phone, "✅ Seller will contact you shortly.");
+    return;
+  }
 
-    model:
-      session.data.model,
+  // ── RESET COMMANDS ────────────────────────────────────────────────────────
 
-    ram:
-      session.data.ram,
+  const resetCommands = [
+    "restart",
+    "reset",
+    "start over",
+    "menu",
+    "cancel"
+  ];
 
-    storage:
-      session.data.storage,
+  if (resetCommands.includes(text.toLowerCase())) {
 
-    color:
-      session.data.color
-  });
+    session.step = "zone_select";
+    session.data = {};
+    session.location = null;
 
-  session.awaitingLead =
-    false;
+    await saveSession(phone, session);
 
-  session.step =
-  "brand";
+    await sendMessage(phone, "✅ Search restarted.");
 
-session.data = {};
+    const zoneNames = ZONES.map(z => z.zone);
 
-  await saveSession(
-    phone,
-    session
-  );
+    await sendListMessage(
+      phone,
+      "📍 Which zone are you in?\n\nSelect your area to find nearest shops",
+      "Select Zone",
+      zoneNames
+    );
 
-  await sendMessage(
-    phone,
-    "✅ Seller will contact you shortly."
-  );
+    return;
+  }
 
-  return;
-}
+  // ── DONE STATE ────────────────────────────────────────────────────────────
+
+  if (session.step === "done") {
+    session.step = "zone_select";
+    session.data = {};
+    session.location = null;
+    session.lastSearch = null;
+    await saveSession(phone, session);
+  }
+
+  // ── ZONE SELECT ───────────────────────────────────────────────────────────
+
+  if (session.step === "zone_select") {
+
+    const zoneNames = ZONES.map(z => z.zone);
+
+    // Check if customer selected a zone
+    const matchedZone = ZONES.find(z => z.zone === text);
+
+    if (matchedZone) {
+
+      session.step = "area_select";
+      session.data.selectedZone = matchedZone.zone;
+
+      await saveSession(phone, session);
+
+      await sendListMessage(
+        phone,
+        `📍 Which area in ${matchedZone.zone}?`,
+        "Select Area",
+        matchedZone.areas
+      );
+
+      return;
+    }
+
+    // Check if customer typed a smart search query
+    if (text.length > 0) {
+
+      const smartResults = await smartSearch(text);
+
+      if (smartResults.length) {
+
+        await trackSearch({
+          phone,
+          searchType: "smart_search"
+        });
+
+        const sorted = applyLocationSort(smartResults, session);
+        const formatted = formatResults(sorted);
+
+        await sendMessage(phone, formatted);
+
+        session.step = "done";
+        await saveSession(phone, session);
+        return;
+      }
+    }
+
+    // First visit or no match — show zone list
+    await sendListMessage(
+      phone,
+      "📍 Which zone are you in?\n\nSelect your area to find nearest shops",
+      "Select Zone",
+      zoneNames
+    );
+
+    session.step = "zone_select";
+    await saveSession(phone, session);
+    return;
+  }
+
+  // ── AREA SELECT ───────────────────────────────────────────────────────────
+
+  if (session.step === "area_select") {
+
+    const selectedZone = ZONES.find(
+      z => z.zone === session.data.selectedZone
+    );
+
+    if (!selectedZone) {
+      session.step = "zone_select";
+      await saveSession(phone, session);
+      return;
+    }
+
+    const matchedArea = selectedZone.areas.find(a => a === text);
+
+    if (!matchedArea) {
+      await sendMessage(phone, "Invalid area. Please select from the list.");
+      return;
+    }
+
+    // Save customer location
+    const coords = getAreaCoordinates(matchedArea);
+
+    session.location = {
+      area: matchedArea,
+      lat: coords ? coords.lat : null,
+      lng: coords ? coords.lng : null
+    };
+
+    session.step = "brand";
+
+    await saveSession(phone, session);
+
+    await sendMessage(
+      phone,
+      `✅ Got it! Showing shops nearest to *${matchedArea}*\n\nNow let's find your phone! 📱`
+    );
+
+    // Show brand list
+    const brands = await getBrands();
+    session.brands = brands;
+    session.step = "brand_select";
+
+    await saveSession(phone, session);
+
+    await sendListMessage(
+      phone,
+      "📱 Choose Brand",
+      "Select Brand",
+      brands
+    );
+
+    return;
+  }
+
+  // ── RECOMMENDATION KEYWORDS ───────────────────────────────────────────────
 
   const recommendationKeywords = [
-  "best",
-  "cheap",
-  "budget",
-  "gaming",
-  "camera",
-  "under"
-];
+    "best", "cheap", "budget", "gaming", "camera", "under"
+  ];
 
-const isRecommendationQuery =
-  recommendationKeywords.some(
-    keyword =>
-      text
-        .toLowerCase()
-        .includes(keyword)
+  const isRecommendationQuery = recommendationKeywords.some(
+    keyword => text.toLowerCase().includes(keyword)
   );
 
-if (
-  isRecommendationQuery
-) {
+  if (isRecommendationQuery) {
+    const recommendations = await getRecommendations(text);
+    const sorted = applyLocationSort(recommendations, session);
+    const formatted = formatResults(sorted);
 
-  const recommendations =
-    await getRecommendations(
-      text
+    await sendMessage(phone, `🤖 AI Recommendations\n\n${formatted}`);
+    await saveSession(phone, session);
+    return;
+  }
+
+  // ── SMART SEARCH ──────────────────────────────────────────────────────────
+
+  if (session.step === "brand") {
+
+    const smartResults = await smartSearch(text);
+
+    if (smartResults.length) {
+
+      await trackSearch({ phone, searchType: "smart_search" });
+
+      const sorted = applyLocationSort(smartResults, session);
+      const formatted = formatResults(sorted);
+
+      await sendMessage(phone, formatted);
+
+      session.step = "done";
+      await saveSession(phone, session);
+      return;
+    }
+  }
+
+  // ── START BRAND FLOW ──────────────────────────────────────────────────────
+
+  if (session.step === "brand") {
+
+    const brands = await getBrands();
+
+    session.step = "brand_select";
+    session.brands = brands;
+
+    await saveSession(phone, session);
+
+    await sendListMessage(
+      phone,
+      "📱 Choose Brand",
+      "Select Brand",
+      brands
     );
 
-  const formatted =
-    formatResults(
-      recommendations
+    return;
+  }
+
+  // ── BRAND SELECT ──────────────────────────────────────────────────────────
+
+  if (session.step === "brand_select") {
+
+    const brands = await getBrands();
+    const selectedBrand = text;
+
+    if (!brands.includes(selectedBrand)) {
+      await sendMessage(phone, "Invalid brand.");
+      return;
+    }
+
+    session.data.brand = selectedBrand;
+
+    const models = await getModels(selectedBrand);
+    session.step = "model_select";
+    session.models = models;
+
+    await saveSession(phone, session);
+
+    await sendListMessage(phone, "Choose Model", "Select Model", models);
+    return;
+  }
+
+  // ── MODEL SELECT ──────────────────────────────────────────────────────────
+
+  if (session.step === "model_select") {
+
+    const models = await getModels(session.data.brand);
+    const selectedModel = text;
+
+    if (!models.includes(selectedModel)) {
+      await sendMessage(phone, "Invalid model.");
+      return;
+    }
+
+    session.data.model = selectedModel;
+
+    const ramOptions = await getRam(session.data.brand, session.data.model);
+    session.step = "ram_select";
+    session.ramOptions = ramOptions;
+
+    await saveSession(phone, session);
+
+    await sendListMessage(phone, "Choose RAM", "Select RAM", ramOptions);
+    return;
+  }
+
+  // ── RAM SELECT ────────────────────────────────────────────────────────────
+
+  if (session.step === "ram_select") {
+
+    const ramOptions = await getRam(session.data.brand, session.data.model);
+    const selectedRam = text;
+
+    if (!ramOptions.includes(selectedRam)) {
+      await sendMessage(phone, "Invalid RAM option.");
+      return;
+    }
+
+    session.data.ram = selectedRam;
+
+    const storageOptions = await getStorage(
+      session.data.brand,
+      session.data.model,
+      session.data.ram
     );
 
-  await sendMessage(
-    phone,
-    `🤖 AI Recommendations\n\n${formatted}`
-  );
+    session.step = "storage_select";
+    session.storageOptions = storageOptions;
 
-await saveSession(
-  phone,
-  session
-);
+    await saveSession(phone, session);
 
+    await sendListMessage(phone, "Choose Storage", "Select Storage", storageOptions);
+    return;
+  }
 
-  return;
-}
+  // ── STORAGE SELECT ────────────────────────────────────────────────────────
 
-  if (
-  session.step === "done"
-) {
+  if (session.step === "storage_select") {
 
-  session.step =
-    "brand";
+    const storageOptions = await getStorage(
+      session.data.brand,
+      session.data.model,
+      session.data.ram
+    );
 
-  session.data = {};
+    const selectedStorage = text;
 
-  session.lastSearch =
-    null;
+    if (!storageOptions.includes(selectedStorage)) {
+      await sendMessage(phone, "Invalid storage option.");
+      return;
+    }
 
-  await saveSession(
-    phone,
-    session
-  );
-}
+    session.data.storage = selectedStorage;
 
-  // RESET COMMANDS
+    const colorOptions = await getColors(
+      session.data.brand,
+      session.data.model,
+      session.data.ram,
+      session.data.storage
+    );
 
-const resetCommands = [
-  "restart",
-  "reset",
-  "start over",
-  "menu",
-  "cancel"
-];
+    session.step = "color_select";
+    session.colorOptions = colorOptions;
 
-if (
-  resetCommands.includes(
-    text.toLowerCase()
-  )
-) {
+    await saveSession(phone, session);
 
-  session.step =
-    "brand";
+    await sendListMessage(phone, "Choose Color", "Select Color", colorOptions);
+    return;
+  }
 
-  session.data = {};
+  // ── COLOR SELECT ──────────────────────────────────────────────────────────
 
-  session.lastSearch =
-    null;
+  if (session.step === "color_select") {
 
-  await saveSession(
-  phone,
-  session
-);
+    const colorOptions = await getColors(
+      session.data.brand,
+      session.data.model,
+      session.data.ram,
+      session.data.storage
+    );
 
-  await sendMessage(
-    phone,
-    "✅ Search restarted."
-  );
+    const selectedColor = text;
 
-  const brands =
-    await getBrands();
+    if (!colorOptions.includes(selectedColor)) {
+      await sendMessage(phone, "Invalid color option.");
+      return;
+    }
 
-  session.brands =
-    brands;
-
-  session.step =
-    "brand_select";
-
-    await saveSession(
-  phone,
-  session
-);
-
-  await sendListMessage(
-    phone,
-    "Choose Brand",
-    "Select Brand",
-    brands
-  );
-
-  return;
-}
-
-
-// SMART SEARCH
-
-if (
-  session.step === "brand"
-) {
-
-  const smartResults =
-    await smartSearch(text);
-
-  if (
-    smartResults.length
-  ) {
+    session.data.color = selectedColor;
 
     await trackSearch({
       phone,
-
-      searchType:
-        "smart_search"
+      searchType: "guided_flow",
+      brand: session.data.brand,
+      model: session.data.model,
+      ram: session.data.ram,
+      storage: session.data.storage,
+      color: session.data.color
     });
 
-    const formatted =
-      formatResults(
-        smartResults
-      );
+    const results = await searchInventory({
+      brand: session.data.brand,
+      model: session.data.model,
+      ram: session.data.ram,
+      storage: session.data.storage,
+      color: session.data.color
+    });
 
-    await sendMessage(
-  phone,
-  formatted
-);
+    const sorted = applyLocationSort(results, session);
+    const formatted = formatResults(sorted);
 
-session.step =
-  "done";
+    await sendMessage(phone, formatted);
 
-    await saveSession(
-      phone,
-      session
-    );
-
+    session.step = "done";
+    await saveSession(phone, session);
     return;
   }
-}
-
-  // START FLOW
-
-  if (
-    session.step === "brand"
-  ) {
-
-    const brands =
-      await getBrands();
-
-    session.step =
-  "brand_select";
-
-session.brands =
-  brands;
-
-  await saveSession(
-  phone,
-  session
-);
-
-await sendListMessage(
-  phone,
-  `📱 Welcome to StockNear
-
-Find phones available near you instantly 🚀
-
-Choose Brand`,
-  "Select Brand",
-  brands
-);
-
-return;
-  }
-
-  // BRAND SELECT
-
-  if (
-    session.step ===
-    "brand_select"
-  ) {
-
-    const brands =
-  await getBrands();
-
-    const selectedBrand =
-  text;
-
-    if (
-  !brands.includes(
-    selectedBrand
-  )
-) {
-
-      await sendMessage(
-        phone,
-        "Invalid brand."
-      );
-
-      return;
-    }
-
-    session.data.brand =
-  selectedBrand;
-
-const models =
-  await getModels(
-    selectedBrand
-  );
-
-session.step =
-  "model_select";
-
-session.models =
-  models;
-
-await saveSession(
-  phone,
-  session
-);
-
-await sendListMessage(
-  phone,
-  "Choose Model",
-  "Select Model",
-  models
-);
-
-return;
-  }
-
-  // MODEL SELECT
-
-  if (
-    session.step ===
-    "model_select"
-  ) {
-
-    const models =
-  await getModels(
-    session.data.brand
-  );
-
-    const selectedModel =
-  text;
-
-    if (
-  !models.includes(
-    selectedModel
-  )
-) {
-
-      await sendMessage(
-        phone,
-        "Invalid model."
-      );
-
-      return;
-    }
-
-    session.data.model =
-  selectedModel;
-
-const ramOptions =
-  await getRam(
-    session.data.brand,
-    session.data.model
-  );
-
-session.step =
-  "ram_select";
-
-session.ramOptions =
-  ramOptions;
-
-await saveSession(
-  phone,
-  session
-);
-
-await sendListMessage(
-  phone,
-  "Choose RAM",
-  "Select RAM",
-  ramOptions
-);
-
-return;
-  }
-
-  // RAM SELECT
-
-if (
-  session.step ===
-  "ram_select"
-) {
-
-  const ramOptions =
-  await getRam(
-    session.data.brand,
-    session.data.model
-  );
-
-  const selectedRam =
-  text;
-
-  if (
-  !ramOptions.includes(
-    selectedRam
-  )
-) {
-
-    await sendMessage(
-      phone,
-      "Invalid RAM option."
-    );
-
-    return;
-  }
-
-  session.data.ram =
-  selectedRam;
-
-const storageOptions =
-  await getStorage(
-    session.data.brand,
-    session.data.model,
-    session.data.ram
-  );
-
-session.step =
-  "storage_select";
-
-session.storageOptions =
-  storageOptions;
-
-await saveSession(
-  phone,
-  session
-);
-
-await sendListMessage(
-  phone,
-  "Choose Storage",
-  "Select Storage",
-  storageOptions
-);
-
-return;
-}
-
-// STORAGE SELECT
-
-if (
-  session.step ===
-  "storage_select"
-) {
-
-  const storageOptions =
-  await getStorage(
-    session.data.brand,
-    session.data.model,
-    session.data.ram
-  );
-
-  const selectedStorage =
-  text;
-
-  if (
-  !storageOptions.includes(
-    selectedStorage
-  )
-) {
-
-    await sendMessage(
-      phone,
-      "Invalid storage option."
-    );
-
-    return;
-  }
-
-  session.data.storage =
-  selectedStorage;
-
-const colorOptions =
-  await getColors(
-    session.data.brand,
-    session.data.model,
-    session.data.ram,
-    session.data.storage
-  );
-
-session.step =
-  "color_select";
-
-session.colorOptions =
-  colorOptions;
-
-await saveSession(
-  phone,
-  session
-);
-
-await sendListMessage(
-  phone,
-  "Choose Color",
-  "Select Color",
-  colorOptions
-);
-
-return;
-}
-
-// COLOR SELECT
-
-if (
-  session.step ===
-  "color_select"
-) {
-
-  const colorOptions =
-  await getColors(
-    session.data.brand,
-    session.data.model,
-    session.data.ram,
-    session.data.storage
-  );
-
-  const selectedColor =
-  text;
-
-  if (
-  !colorOptions.includes(
-    selectedColor
-  )
-) {
-
-    await sendMessage(
-      phone,
-      "Invalid color option."
-    );
-
-    return;
-  }
-
-  session.data.color =
-  selectedColor;
-
-  await trackSearch({
-  phone,
-
-  searchType:
-    "guided_flow",
-
-  brand:
-    session.data.brand,
-
-  model:
-    session.data.model,
-
-  ram:
-    session.data.ram,
-
-  storage:
-    session.data.storage,
-
-  color:
-    session.data.color
-});
-
-const results =
-  await searchInventory({
-    brand:
-      session.data.brand,
-
-    model:
-      session.data.model,
-
-    ram:
-      session.data.ram,
-
-    storage:
-      session.data.storage,
-
-    color:
-      session.data.color
-  });
-
-const formatted =
-  formatResults(results);
-
-await sendMessage(
-  phone,
-  formatted
-);
-
-session.step =
-  "done";
-
-await saveSession(
-  phone,
-  session
-);
-
-return;
-}
-
 }
 
 module.exports = {

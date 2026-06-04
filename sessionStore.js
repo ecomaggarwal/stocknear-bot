@@ -1,65 +1,51 @@
 const supabase =
   require("./supabase");
 
-async function getSession(
-  phone
-) {
+async function getSession(phone) {
 
-  const {
-    data,
-    error
-  } = await supabase
-    .from("sessions")
-    .select("*")
-    .eq("phone", phone)
-    .single();
+  const { data, error } =
+    await supabase
+      .from("sessions")
+      .select("*")
+      .eq("phone", phone)
+      .single();
 
   if (error || !data) {
-
     return {
-      step: "brand",
-      data: {}
+      step: "zone_select",
+      data: {},
+      location: null
     };
   }
 
   return {
     step: data.step,
-    data: data.data || {}
+    data: data.data || {},
+    location: data.location || null
   };
 }
 
-async function saveSession(
-  phone,
-  session
-) {
+async function saveSession(phone, session) {
 
-  const {
-    error
-  } = await supabase
-    .from("sessions")
-    .upsert(
-  [
-    {
-      phone,
-
-      step:
-        session.step,
-
-      data:
-        session.data,
-
-      updated_at:
-        new Date()
-    }
-  ],
-
-  {
-    onConflict: "phone"
-  }
-);
+  const { error } =
+    await supabase
+      .from("sessions")
+      .upsert(
+        [
+          {
+            phone,
+            step: session.step,
+            data: session.data,
+            location: session.location || null,
+            updated_at: new Date()
+          }
+        ],
+        {
+          onConflict: "phone"
+        }
+      );
 
   if (error) {
-
     console.log(
       "Session save error:",
       error.message
@@ -67,17 +53,12 @@ async function saveSession(
   }
 }
 
-async function resetSession(
-  phone
-) {
-
-  await saveSession(
-    phone,
-    {
-      step: "brand",
-      data: {}
-    }
-  );
+async function resetSession(phone) {
+  await saveSession(phone, {
+    step: "zone_select",
+    data: {},
+    location: null
+  });
 }
 
 module.exports = {

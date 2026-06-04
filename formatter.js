@@ -1,3 +1,7 @@
+const {
+  formatDistance
+} = require("./locationHelper");
+
 function formatResults(results) {
 
   if (!results.length) {
@@ -6,13 +10,13 @@ function formatResults(results) {
 `❌ No matching phones found.
 
 Try:
-• another color
-• Any RAM
-• Any Storage
-• different model
+- another color
+- Any RAM
+- Any Storage
+- different model
 
 Or type your requirement again 🔍`
-);
+    );
   }
 
   let response = "";
@@ -32,16 +36,17 @@ Or type your requirement again 🔍`
 `;
 
   results
-  .slice(0, 10)
-  .forEach(
-    (item, index) => {
+    .slice(0, 10)
+    .forEach((item, index) => {
+
+      const distanceText =
+        formatDistance(item.distanceKm);
 
       response +=
 `${index + 1}. 🏪 ${item.shopName}
 
 ${item.freshness}
-
-📍 ${item.location}
+${distanceText ? `📏 ${distanceText}\n` : ""}📍 ${item.location}
 
 📍 View Shop Location:
 ${item.mapsLink}
@@ -53,18 +58,17 @@ ${item.shopPhone ? `☎️ ${item.shopPhone}` : ""}
 ━━━━━━━━━━━━
 
 `;
-    }
-  );
+    });
 
   response +=
 `💡 Type:
-• restart
-• stop`;
+- restart
+- stop`;
 
-if (results.length > 10) {
-  response +=
+  if (results.length > 10) {
+    response +=
 `\n\nShowing limited results. Use specific model/RAM/storage/color for better matches.`;
-}
+  }
 
   return response;
 }

@@ -95,7 +95,13 @@ if (
         row.c[13]?.v || "",
 
       shopPhone:
-        row.c[14]?.v || ""
+        row.c[14]?.v || "",
+
+      shopLat:
+        row.c[15]?.v || null,
+
+      shopLng:
+        row.c[16]?.v || null
     }));
 
   lastFetchTime =
