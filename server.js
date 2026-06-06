@@ -5,6 +5,8 @@ const {
   sendListMessage
 } = require("./send");
 
+const { sendRemindersToAll } = require("./ownerReminder");
+
 const {
   getBrands,
   getModels,
@@ -189,11 +191,29 @@ We appreciate you using StockNear! 🙏`
 
     let text = "";
 
-    if (message.text) {
-      text = message.text.body.trim();
-    } else if (message.interactive?.list_reply) {
-      text = message.interactive.list_reply.id;
-    }
+if (message.text) {
+  text = message.text.body.trim();
+} else if (message.interactive?.list_reply) {
+  text = message.interactive.list_reply.id;
+}
+
+// ── OWNER UPDATE REPLY ────────────────────────────────────────────────────
+
+if (text.toUpperCase() === "UPDATE") {
+  const { getOwnerContacts } = require("./ownerReminder");
+  const owners = await getOwnerContacts();
+  const isOwner = owners.some(o => o.ownerPhone === from);
+
+  if (isOwner) {
+    await sendMessage(
+      from,
+      `✅ Thank you! Your stock has been marked as updated.
+
+Customers will now see your inventory as verified. 🙂`
+    );
+    return res.sendStatus(200);
+  }
+}
 
     console.log("Message from:", from);
     console.log("Text:", text);
@@ -238,6 +258,43 @@ app.get("/supabase-test", async (req, res) => {
 const PORT = 3000;
 
 setInterval(refreshInventoryCache, 5 * 60 * 1000);
+
+// ── SCHEDULE REMINDERS ────────────────────────────────────────────────────────
+
+function scheduleReminder(hour, minute) {
+  function getNextTime() {
+    const now = new Date();
+    const IST = new Date(
+      now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+    );
+
+    const next = new Date(IST);
+    next.setHours(hour, minute, 0, 0);
+
+    if (IST >= next) {
+      next.setDate(next.getDate() + 1);
+    }
+
+    return next - IST;
+  }
+
+  function run() {
+    sendRemindersToAll();
+    setTimeout(run, 24 * 60 * 60 * 1000);
+  }
+
+  setTimeout(() => {
+    run();
+  }, getNextTime());
+}
+
+// 10:00 AM IST
+scheduleReminder(10, 0);
+
+// 4:00 PM IST
+scheduleReminder(16, 0);
+
+console.log("Reminders scheduled for 10:00 AM and 4:00 PM IST");
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
