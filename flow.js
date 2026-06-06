@@ -105,11 +105,25 @@ async function handleFlow(phone, text, sendMessage, sendListMessage) {
 
     const zoneNames = ZONES.map(z => z.zone);
     await sendListMessage(
-      phone,
-      "📍 Which zone are you in?\n\nSelect your area to find nearest shops",
-      "Select Zone",
-      zoneNames
-    );
+  phone,
+  `👋 Welcome to Gurgaon Phone Finder
+
+📱 Looking for a phone but can't find it in nearby stores?
+
+We'll help you find the nearest Gurgaon stores that have your required phone available.
+
+✅ Verified Store Contacts
+✅ Nearby Store Details
+✅ Save Time & Fuel
+✅ Free to Use
+
+🛡️ Stock Confidence Promise
+If we confirm a phone is available at a store and you visit but the phone is not available, we'll compensate you with ₹100.*
+
+Select your area below to get started 👇`,
+  "Select Zone",
+  zoneNames
+);
     return;
   }
 
@@ -159,11 +173,25 @@ async function handleFlow(phone, text, sendMessage, sendListMessage) {
     }
 
     await sendListMessage(
-      phone,
-      "📍 Which zone are you in?\n\nSelect your area to find nearest shops",
-      "Select Zone",
-      zoneNames
-    );
+  phone,
+  `👋 Welcome to Gurgaon Phone Finder
+
+📱 Looking for a phone but can't find it in nearby stores?
+
+We'll help you find the nearest Gurgaon stores that have your required phone available.
+
+✅ Verified Store Contacts
+✅ Nearby Store Details
+✅ Save Time & Fuel
+✅ Free to Use
+
+🛡️ Stock Confidence Promise
+If we confirm a phone is available at a store and you visit but the phone is not available, we'll compensate you with ₹100.*
+
+Select your area below to get started 👇`,
+  "Select Zone",
+  zoneNames
+);
     session.step = "zone_select";
     await saveSession(phone, session);
     return;
