@@ -1,10 +1,20 @@
-const { getInventory } =
-  require("./sheets");
+const { getInventory } = require("./sheets");
+
+// Primary brands shown first (max 9)
+const PRIMARY_BRANDS = [
+  "Samsung",
+  "Apple",
+  "OnePlus",
+  "Realme",
+  "Vivo",
+  "Oppo",
+  "Motorola",
+  "Nokia",
+  "Google"
+];
 
 function normalize(value) {
-  return String(value)
-    .trim()
-    .toLowerCase();
+  return String(value).trim().toLowerCase();
 }
 
 function uniqueValues(array) {
@@ -19,10 +29,19 @@ function uniqueValues(array) {
 
 async function getBrands() {
   const inventory = await getInventory();
+  const allBrands = uniqueValues(inventory.map(item => item.brand));
 
-  return uniqueValues(
-    inventory.map(item => item.brand)
+  // Primary brands that exist in inventory
+  const primary = PRIMARY_BRANDS.filter(b =>
+    allBrands.some(ab => ab.toLowerCase() === b.toLowerCase())
   );
+
+  // Secondary brands not in primary list
+  const secondary = allBrands.filter(b =>
+    !PRIMARY_BRANDS.some(pb => pb.toLowerCase() === b.toLowerCase())
+  );
+
+  return { primary, secondary };
 }
 
 async function getModels(brand) {
@@ -48,18 +67,12 @@ async function getRam(brand, model) {
     );
   }
 
-  const ramOptions = filtered.map(
-    item => item.ram
-  );
+  const ramOptions = filtered.map(item => item.ram);
 
   return [...uniqueValues(ramOptions), "Any RAM"];
 }
 
-async function getStorage(
-  brand,
-  model,
-  ram
-) {
+async function getStorage(brand, model, ram) {
   const inventory = await getInventory();
 
   let filtered = inventory.filter(
@@ -78,22 +91,12 @@ async function getStorage(
     );
   }
 
-  const storageOptions = filtered.map(
-    item => item.storage
-  );
+  const storageOptions = filtered.map(item => item.storage);
 
-  return [
-    ...uniqueValues(storageOptions),
-    "Any Storage"
-  ];
+  return [...uniqueValues(storageOptions), "Any Storage"];
 }
 
-async function getColors(
-  brand,
-  model,
-  ram,
-  storage
-) {
+async function getColors(brand, model, ram, storage) {
   const inventory = await getInventory();
 
   let filtered = inventory.filter(
@@ -118,23 +121,12 @@ async function getColors(
     );
   }
 
-  const colors = filtered.map(
-    item => item.color
-  );
+  const colors = filtered.map(item => item.color);
 
-  return [
-    ...uniqueValues(colors),
-    "Any Color"
-  ];
+  return [...uniqueValues(colors), "Any Color"];
 }
 
-async function searchInventory({
-  brand,
-  model,
-  ram,
-  storage,
-  color
-}) {
+async function searchInventory({ brand, model, ram, storage, color }) {
   const inventory = await getInventory();
 
   let filtered = inventory.filter(
@@ -168,34 +160,25 @@ async function searchInventory({
   }
 
   const freshnessScore = {
-  "🟢 Just now": 4,
-  "🟡 Recent": 3,
-  "🟠 Today": 2,
-  "🔴 Old": 1
-};
+    "🟢 Just now": 4,
+    "🟡 Recent": 3,
+    "🟠 Today": 2,
+    "🔴 Old": 1
+  };
 
-filtered.sort((a, b) => {
-  const freshnessDiff =
-    freshnessScore[b.freshness] -
-    freshnessScore[a.freshness];
+  filtered.sort((a, b) => {
+    const freshnessDiff =
+      (freshnessScore[b.freshness] || 0) - (freshnessScore[a.freshness] || 0);
+    if (freshnessDiff !== 0) return freshnessDiff;
 
-  if (freshnessDiff !== 0) {
-    return freshnessDiff;
-  }
+    const stockDiff = b.stock - a.stock;
+    if (stockDiff !== 0) return stockDiff;
 
-  const stockDiff =
-    b.stock - a.stock;
-
-  if (stockDiff !== 0) {
-    return stockDiff;
-  }
-
-  return a.price - b.price;
-});
+    return a.price - b.price;
+  });
 
   return filtered;
 }
-
 
 module.exports = {
   getBrands,
@@ -203,5 +186,6 @@ module.exports = {
   getRam,
   getStorage,
   getColors,
-  searchInventory
+  searchInventory,
+  PRIMARY_BRANDS
 };

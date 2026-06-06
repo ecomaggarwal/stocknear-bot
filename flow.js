@@ -1,141 +1,45 @@
-const {
-  saveLead
-} = require("./leads");
+const { saveLead } = require("./leads");
+const { getRecommendations } = require("./recommendations");
+const { getBrands, getModels, getRam, getStorage, getColors, searchInventory } = require("./inventoryHelpers");
+const { formatResults } = require("./formatter");
+const { smartSearch } = require("./smartSearch");
+const { getNextStep } = require("./steps");
+const { getSession, resetSession, saveSession } = require("./sessionStore");
+const { trackSearch } = require("./analytics");
+const { sortResultsByDistance, getAreaCoordinates } = require("./locationHelper");
+const { ZONES } = require("./areaCoordinates");
 
-const {
-  getRecommendations
-} = require("./recommendations");
-
-const {
-  getBrands,
-  getModels,
-  getRam,
-  getStorage,
-  getColors,
-  searchInventory
-} = require("./inventoryHelpers");
-
-const {
-  formatResults
-} = require("./formatter");
-
-const {
-  smartSearch
-} = require("./smartSearch");
-
-const {
-  getNextStep
-} = require("./steps");
-
-const {
-  getSession,
-  resetSession,
-  saveSession
-} = require("./sessionStore");
-
-const {
-  trackSearch
-} = require("./analytics");
-
-const {
-  sortResultsByDistance,
-  getAreaCoordinates
-} = require("./locationHelper");
-
-const {
-  ZONES
-} = require("./areaCoordinates");
-
-// ── HELPER — Apply distance sorting if customer location exists ──────────────
+// ── HELPER — Apply distance sorting ──────────────────────────────────────────
 
 function applyLocationSort(results, session) {
-  if (
-    session.location &&
-    session.location.lat &&
-    session.location.lng
-  ) {
-    return sortResultsByDistance(
-      results,
-      session.location.lat,
-      session.location.lng
-    );
+  if (session.location && session.location.lat && session.location.lng) {
+    return sortResultsByDistance(results, session.location.lat, session.location.lng);
   }
   return results;
 }
 
-// ── HELPER — Send next guided flow step ──────────────────────────────────────
+// ── HELPER — Show brand list ──────────────────────────────────────────────────
 
-async function sendNextStep(session, phone, sendListMessage) {
+async function showBrandList(phone, session, sendListMessage, saveSession) {
+  const { primary, secondary } = await getBrands();
 
-  const nextStep = getNextStep(session.data);
+  session.primaryBrands = primary;
+  session.secondaryBrands = secondary;
+  session.step = "brand_select";
 
-  if (!nextStep) {
-    const results = await searchInventory({
-      brand: session.data.brand,
-      model: session.data.model,
-      ram: session.data.ram,
-      storage: session.data.storage,
-      color: session.data.color
-    });
+  await saveSession(phone, session);
 
-    return {
-      done: true,
-      results: applyLocationSort(results, session)
-    };
-  }
-
-  if (nextStep === "model") {
-    const models = await getModels(session.data.brand);
-    session.models = models;
-    session.step = "model_select";
-    await sendListMessage(phone, "Choose Model", "Select Model", models);
-    return { done: false };
-  }
-
-  if (nextStep === "ram") {
-    const ramOptions = await getRam(session.data.brand, session.data.model);
-    session.ramOptions = ramOptions;
-    session.step = "ram_select";
-    await sendListMessage(phone, "Choose RAM", "Select RAM", ramOptions);
-    return { done: false };
-  }
-
-  if (nextStep === "storage") {
-    const storageOptions = await getStorage(
-      session.data.brand,
-      session.data.model,
-      session.data.ram
-    );
-    session.storageOptions = storageOptions;
-    session.step = "storage_select";
-    await sendListMessage(phone, "Choose Storage", "Select Storage", storageOptions);
-    return { done: false };
-  }
-
-  if (nextStep === "color") {
-    const colorOptions = await getColors(
-      session.data.brand,
-      session.data.model,
-      session.data.ram,
-      session.data.storage
-    );
-    session.colorOptions = colorOptions;
-    session.step = "color_select";
-    await sendListMessage(phone, "Choose Color", "Select Color", colorOptions);
-    return { done: false };
-  }
-
-  return { done: false };
+  await sendListMessage(
+    phone,
+    "📱 Choose Brand",
+    "Select Brand",
+    [...primary, "View More Brands"]
+  );
 }
 
 // ── MAIN FLOW ─────────────────────────────────────────────────────────────────
 
-async function handleFlow(
-  phone,
-  text,
-  sendMessage,
-  sendListMessage
-) {
+async function handleFlow(phone, text, sendMessage, sendListMessage) {
 
   console.log("HANDLE FLOW STARTED");
 
@@ -150,10 +54,7 @@ async function handleFlow(
   if (text.toLowerCase() === "stop") {
     session.step = "stopped";
     await saveSession(phone, session);
-    await sendMessage(
-      phone,
-      "🛑 Chat stopped.\n\nSend Hi anytime to start again."
-    );
+    await sendMessage(phone, "🛑 Chat stopped.\n\nSend Hi anytime to start again.");
     return;
   }
 
@@ -166,10 +67,7 @@ async function handleFlow(
 
   // ── LEAD CAPTURE ──────────────────────────────────────────────────────────
 
-  if (
-    session.awaitingLead &&
-    text.toLowerCase() === "yes"
-  ) {
+  if (session.awaitingLead && text.toLowerCase() === "yes") {
     await saveLead({
       phone,
       brand: session.data.brand,
@@ -191,33 +89,23 @@ async function handleFlow(
 
   // ── RESET COMMANDS ────────────────────────────────────────────────────────
 
-  const resetCommands = [
-    "restart",
-    "reset",
-    "start over",
-    "menu",
-    "cancel"
-  ];
+  const resetCommands = ["restart", "reset", "start over", "menu", "cancel"];
 
   if (resetCommands.includes(text.toLowerCase())) {
-
     session.step = "zone_select";
     session.data = {};
     session.location = null;
 
     await saveSession(phone, session);
-
     await sendMessage(phone, "✅ Search restarted.");
 
     const zoneNames = ZONES.map(z => z.zone);
-
     await sendListMessage(
       phone,
       "📍 Which zone are you in?\n\nSelect your area to find nearest shops",
       "Select Zone",
       zoneNames
     );
-
     return;
   }
 
@@ -236,15 +124,11 @@ async function handleFlow(
   if (session.step === "zone_select") {
 
     const zoneNames = ZONES.map(z => z.zone);
-
-    // Check if customer selected a zone
     const matchedZone = ZONES.find(z => z.zone === text);
 
     if (matchedZone) {
-
       session.step = "area_select";
       session.data.selectedZone = matchedZone.zone;
-
       await saveSession(phone, session);
 
       await sendListMessage(
@@ -253,41 +137,30 @@ async function handleFlow(
         "Select Area",
         matchedZone.areas
       );
-
       return;
     }
 
-    // Check if customer typed a smart search query
+    // Smart search fallback
     if (text.length > 0) {
-
       const smartResults = await smartSearch(text);
-
       if (smartResults.length) {
-
-        await trackSearch({
-          phone,
-          searchType: "smart_search"
-        });
-
+        await trackSearch({ phone, searchType: "smart_search" });
         const sorted = applyLocationSort(smartResults, session);
         const formatted = formatResults(sorted);
-
         await sendMessage(phone, formatted);
-
         session.step = "done";
         await saveSession(phone, session);
         return;
       }
     }
 
-    // First visit or no match — show zone list
+    // Show zone list
     await sendListMessage(
       phone,
       "📍 Which zone are you in?\n\nSelect your area to find nearest shops",
       "Select Zone",
       zoneNames
     );
-
     session.step = "zone_select";
     await saveSession(phone, session);
     return;
@@ -297,9 +170,7 @@ async function handleFlow(
 
   if (session.step === "area_select") {
 
-    const selectedZone = ZONES.find(
-      z => z.zone === session.data.selectedZone
-    );
+    const selectedZone = ZONES.find(z => z.zone === session.data.selectedZone);
 
     if (!selectedZone) {
       session.step = "zone_select";
@@ -314,7 +185,6 @@ async function handleFlow(
       return;
     }
 
-    // Save customer location
     const coords = getAreaCoordinates(matchedArea);
 
     session.location = {
@@ -323,8 +193,6 @@ async function handleFlow(
       lng: coords ? coords.lng : null
     };
 
-    session.step = "brand";
-
     await saveSession(phone, session);
 
     await sendMessage(
@@ -332,28 +200,13 @@ async function handleFlow(
       `✅ Got it! Showing shops nearest to *${matchedArea}*\n\nNow let's find your phone! 📱`
     );
 
-    // Show brand list
-    const brands = await getBrands();
-    session.brands = brands;
-    session.step = "brand_select";
-
-    await saveSession(phone, session);
-
-    await sendListMessage(
-      phone,
-      "📱 Choose Brand",
-      "Select Brand",
-      brands
-    );
-
+    await showBrandList(phone, session, sendListMessage, saveSession);
     return;
   }
 
   // ── RECOMMENDATION KEYWORDS ───────────────────────────────────────────────
 
-  const recommendationKeywords = [
-    "best", "cheap", "budget", "gaming", "camera", "under"
-  ];
+  const recommendationKeywords = ["best", "cheap", "budget", "gaming", "camera", "under"];
 
   const isRecommendationQuery = recommendationKeywords.some(
     keyword => text.toLowerCase().includes(keyword)
@@ -363,7 +216,6 @@ async function handleFlow(
     const recommendations = await getRecommendations(text);
     const sorted = applyLocationSort(recommendations, session);
     const formatted = formatResults(sorted);
-
     await sendMessage(phone, `🤖 AI Recommendations\n\n${formatted}`);
     await saveSession(phone, session);
     return;
@@ -372,18 +224,12 @@ async function handleFlow(
   // ── SMART SEARCH ──────────────────────────────────────────────────────────
 
   if (session.step === "brand") {
-
     const smartResults = await smartSearch(text);
-
     if (smartResults.length) {
-
       await trackSearch({ phone, searchType: "smart_search" });
-
       const sorted = applyLocationSort(smartResults, session);
       const formatted = formatResults(sorted);
-
       await sendMessage(phone, formatted);
-
       session.step = "done";
       await saveSession(phone, session);
       return;
@@ -393,21 +239,7 @@ async function handleFlow(
   // ── START BRAND FLOW ──────────────────────────────────────────────────────
 
   if (session.step === "brand") {
-
-    const brands = await getBrands();
-
-    session.step = "brand_select";
-    session.brands = brands;
-
-    await saveSession(phone, session);
-
-    await sendListMessage(
-      phone,
-      "📱 Choose Brand",
-      "Select Brand",
-      brands
-    );
-
+    await showBrandList(phone, session, sendListMessage, saveSession);
     return;
   }
 
@@ -415,11 +247,26 @@ async function handleFlow(
 
   if (session.step === "brand_select") {
 
-    const brands = await getBrands();
     const selectedBrand = text;
 
-    if (!brands.includes(selectedBrand)) {
-      await sendMessage(phone, "Invalid brand.");
+    // Handle "View More Brands"
+    if (selectedBrand === "View More Brands") {
+      await sendListMessage(
+        phone,
+        "📱 Choose Brand",
+        "Select Brand",
+        session.secondaryBrands || []
+      );
+      return;
+    }
+
+    const allBrands = [
+      ...(session.primaryBrands || []),
+      ...(session.secondaryBrands || [])
+    ];
+
+    if (!allBrands.includes(selectedBrand)) {
+      await sendMessage(phone, "Invalid brand. Please select from the list.");
       return;
     }
 
