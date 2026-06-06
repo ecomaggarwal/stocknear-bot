@@ -20,7 +20,14 @@ Or type your requirement again 🔍`
   const first = results[0];
 
   response +=
-`📱 ${first.brand} ${first.model}
+`✅ We found nearby stores matching your selection.
+Please call the store before visiting.
+📍 Availability was recently verified.
+🛡️ Covered under our ₹100 Stock Confidence Promise.*
+
+━━━━━━━━━━━━
+
+📱 ${first.brand} ${first.model}
 
 💾 ${first.ram} | ${first.storage}
 🎨 ${first.color}
