@@ -25,6 +25,8 @@ Please call the store before visiting.
 📍 Availability was recently verified.
 🛡️ Covered under our ₹100 Stock Confidence Promise.*
 
+⚡ Availability changes throughout the day. We recommend contacting the store before visiting.
+
 ━━━━━━━━━━━━
 
 📱 ${first.brand} ${first.model}
@@ -32,7 +34,7 @@ Please call the store before visiting.
 💾 ${first.ram} | ${first.storage}
 🎨 ${first.color}
 
-📍 Showing top ${Math.min(results.length, 10)} of ${results.length} store(s)
+🎉 Great news! We found ${results.length} nearby store${results.length > 1 ? 's' : ''} for your selected phone.
 
 ━━━━━━━━━━━━
 
@@ -62,7 +64,14 @@ ${item.shopPhone ? `☎️ ${item.shopPhone}` : ""}
   response +=
 `💡 Type:
 - restart
-- stop`;
+- stop
+
+━━━━━━━━━━━━
+
+🛒 *Bought a phone from one of these stores?*
+Earn upto ₹2000 cashback!
+
+Just send a photo of your purchase bill here and our team will process your cashback within 24 hours. 💰`;
 
   if (results.length > 10) {
     response +=

@@ -38,7 +38,7 @@ session.data.brandPage = 0;
   await saveSession(phone, session);
 
   const options = getPage(allBrands, 0, "View More Brands");
-  await sendListMessage(phone, "📱 Choose Brand", "Select Brand", options);
+  await sendListMessage(phone, "📱 Which brand are you looking for?", "Select Brand", options);
 }
 
 // ── MAIN FLOW ─────────────────────────────────────────────────────────────────
@@ -293,7 +293,7 @@ Choose your preferred brand below 👇
       await saveSession(phone, session);
 
       const options = getPage(allBrands, nextPage, "View More Brands");
-      await sendListMessage(phone, "📱 Choose Brand", "Select Brand", options);
+      await sendListMessage(phone, "📱 Which brand are you looking for?", "Select Brand", options);
       return;
     }
 
