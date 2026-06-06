@@ -227,9 +227,14 @@ Select your area below to get started 👇`,
     await saveSession(phone, session);
 
     await sendMessage(
-      phone,
-      `✅ Got it! Showing shops nearest to *${matchedArea}*\n\nNow let's find your phone! 📱`
-    );
+  phone,
+  `📍 Area Selected: *${matchedArea}*
+
+Great! Now let's find your phone.
+Choose your preferred brand below 👇
+
+⚡ We'll show nearby stores based on your location.`
+);
 
     await showBrandList(phone, session, sendListMessage, saveSession);
     return;
