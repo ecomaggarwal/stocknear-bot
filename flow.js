@@ -21,19 +21,23 @@ function applyLocationSort(results, session) {
 // ── HELPER — Show brand list ──────────────────────────────────────────────────
 
 async function showBrandList(phone, session, sendListMessage, saveSession) {
-  const { primary, secondary } = await getBrands();
+  const allBrands = await getBrands();
 
-  session.primaryBrands = primary;
-  session.secondaryBrands = secondary;
+  const primary = allBrands.slice(0, 9);
+  const secondary = allBrands.slice(9);
+
   session.step = "brand_select";
-
   await saveSession(phone, session);
+
+  const listOptions = secondary.length > 0
+    ? [...primary, "View More Brands"]
+    : primary;
 
   await sendListMessage(
     phone,
     "📱 Choose Brand",
     "Select Brand",
-    [...primary, "View More Brands"]
+    listOptions
   );
 }
 
@@ -250,27 +254,26 @@ async function handleFlow(phone, text, sendMessage, sendListMessage) {
     const selectedBrand = text;
 
     // Handle "View More Brands"
-if (selectedBrand === "View More Brands") {
-  const { secondary } = await getBrands();
+    if (selectedBrand === "View More Brands") {
+      const allBrands = await getBrands();
+      const secondary = allBrands.slice(9);
 
-  if (!secondary || secondary.length === 0) {
-    await sendMessage(phone, "No more brands available.");
-    return;
-  }
+      if (!secondary || secondary.length === 0) {
+        await sendMessage(phone, "No more brands available.");
+        return;
+      }
 
-  await sendListMessage(
-    phone,
-    "📱 More Brands",
-    "Select Brand",
-    secondary
-  );
-  return;
-}
+      await sendListMessage(
+        phone,
+        "📱 More Brands",
+        "Select Brand",
+        secondary
+      );
+      return;
+    }
 
-    const allBrands = [
-      ...(session.primaryBrands || []),
-      ...(session.secondaryBrands || [])
-    ];
+    // Validate brand against full list from sheet
+    const allBrands = await getBrands();
 
     if (!allBrands.includes(selectedBrand)) {
       await sendMessage(phone, "Invalid brand. Please select from the list.");

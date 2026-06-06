@@ -29,19 +29,12 @@ function uniqueValues(array) {
 
 async function getBrands() {
   const inventory = await getInventory();
-  const allBrands = uniqueValues(inventory.map(item => item.brand));
 
-  // Primary brands that exist in inventory
-  const primary = PRIMARY_BRANDS.filter(b =>
-    allBrands.some(ab => ab.toLowerCase() === b.toLowerCase())
+  const allBrands = uniqueValues(
+    inventory.map(item => item.brand)
   );
 
-  // Secondary brands not in primary list
-  const secondary = allBrands.filter(b =>
-    !PRIMARY_BRANDS.some(pb => pb.toLowerCase() === b.toLowerCase())
-  );
-
-  return { primary, secondary };
+  return allBrands;
 }
 
 async function getModels(brand) {
