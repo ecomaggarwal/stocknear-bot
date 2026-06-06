@@ -25,7 +25,7 @@ function applyLocationSort(results, session) {
 function getPage(items, page, moreLabel) {
   const start = page * PAGE_SIZE;
   const slice = items.slice(start, start + PAGE_SIZE);
-  const hasMore = items.length > start + PAGE_SIZE;
+  const hasMore = start + PAGE_SIZE < items.length;
   return hasMore ? [...slice, moreLabel] : slice;
 }
 
