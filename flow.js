@@ -9,6 +9,8 @@ const { trackSearch } = require("./analytics");
 const { sortResultsByDistance, getAreaCoordinates } = require("./locationHelper");
 const { ZONES } = require("./areaCoordinates");
 
+const PAGE_SIZE = 9;
+
 // ── HELPER — Apply distance sorting ──────────────────────────────────────────
 
 function applyLocationSort(results, session) {
@@ -18,27 +20,25 @@ function applyLocationSort(results, session) {
   return results;
 }
 
+// ── HELPER — Get page of items ────────────────────────────────────────────────
+
+function getPage(items, page, moreLabel) {
+  const start = page * PAGE_SIZE;
+  const slice = items.slice(start, start + PAGE_SIZE);
+  const hasMore = items.length > start + PAGE_SIZE;
+  return hasMore ? [...slice, moreLabel] : slice;
+}
+
 // ── HELPER — Show brand list ──────────────────────────────────────────────────
 
 async function showBrandList(phone, session, sendListMessage, saveSession) {
   const allBrands = await getBrands();
-
-  const primary = allBrands.slice(0, 9);
-  const secondary = allBrands.slice(9);
-
   session.step = "brand_select";
+  session.brandPage = 0;
   await saveSession(phone, session);
 
-  const listOptions = secondary.length > 0
-    ? [...primary, "View More Brands"]
-    : primary;
-
-  await sendListMessage(
-    phone,
-    "📱 Choose Brand",
-    "Select Brand",
-    listOptions
-  );
+  const options = getPage(allBrands, 0, "View More Brands");
+  await sendListMessage(phone, "📱 Choose Brand", "Select Brand", options);
 }
 
 // ── MAIN FLOW ─────────────────────────────────────────────────────────────────
@@ -158,7 +158,6 @@ async function handleFlow(phone, text, sendMessage, sendListMessage) {
       }
     }
 
-    // Show zone list
     await sendListMessage(
       phone,
       "📍 Which zone are you in?\n\nSelect your area to find nearest shops",
@@ -252,28 +251,18 @@ async function handleFlow(phone, text, sendMessage, sendListMessage) {
   if (session.step === "brand_select") {
 
     const selectedBrand = text;
+    const allBrands = await getBrands();
 
-    // Handle "View More Brands"
+    // Handle pagination
     if (selectedBrand === "View More Brands") {
-      const allBrands = await getBrands();
-      const secondary = allBrands.slice(9);
+      const nextPage = (session.brandPage || 0) + 1;
+      session.brandPage = nextPage;
+      await saveSession(phone, session);
 
-      if (!secondary || secondary.length === 0) {
-        await sendMessage(phone, "No more brands available.");
-        return;
-      }
-
-      await sendListMessage(
-        phone,
-        "📱 More Brands",
-        "Select Brand",
-        secondary
-      );
+      const options = getPage(allBrands, nextPage, "View More Brands");
+      await sendListMessage(phone, "📱 Choose Brand", "Select Brand", options);
       return;
     }
-
-    // Validate brand against full list from sheet
-    const allBrands = await getBrands();
 
     if (!allBrands.includes(selectedBrand)) {
       await sendMessage(phone, "Invalid brand. Please select from the list.");
@@ -281,14 +270,16 @@ async function handleFlow(phone, text, sendMessage, sendListMessage) {
     }
 
     session.data.brand = selectedBrand;
+    session.brandPage = 0;
+    session.modelPage = 0;
 
     const models = await getModels(selectedBrand);
     session.step = "model_select";
-    session.models = models;
 
     await saveSession(phone, session);
 
-    await sendListMessage(phone, "Choose Model", "Select Model", models);
+    const modelOptions = getPage(models, 0, "View More Models");
+    await sendListMessage(phone, "Choose Model", "Select Model", modelOptions);
     return;
   }
 
@@ -296,8 +287,19 @@ async function handleFlow(phone, text, sendMessage, sendListMessage) {
 
   if (session.step === "model_select") {
 
-    const models = await getModels(session.data.brand);
     const selectedModel = text;
+    const models = await getModels(session.data.brand);
+
+    // Handle pagination
+    if (selectedModel === "View More Models") {
+      const nextPage = (session.modelPage || 0) + 1;
+      session.modelPage = nextPage;
+      await saveSession(phone, session);
+
+      const options = getPage(models, nextPage, "View More Models");
+      await sendListMessage(phone, "Choose Model", "Select Model", options);
+      return;
+    }
 
     if (!models.includes(selectedModel)) {
       await sendMessage(phone, "Invalid model.");
@@ -305,10 +307,10 @@ async function handleFlow(phone, text, sendMessage, sendListMessage) {
     }
 
     session.data.model = selectedModel;
+    session.modelPage = 0;
 
     const ramOptions = await getRam(session.data.brand, session.data.model);
     session.step = "ram_select";
-    session.ramOptions = ramOptions;
 
     await saveSession(phone, session);
 
@@ -337,7 +339,6 @@ async function handleFlow(phone, text, sendMessage, sendListMessage) {
     );
 
     session.step = "storage_select";
-    session.storageOptions = storageOptions;
 
     await saveSession(phone, session);
 
@@ -372,7 +373,6 @@ async function handleFlow(phone, text, sendMessage, sendListMessage) {
     );
 
     session.step = "color_select";
-    session.colorOptions = colorOptions;
 
     await saveSession(phone, session);
 
