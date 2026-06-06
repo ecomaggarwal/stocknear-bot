@@ -66,10 +66,12 @@ ${item.shopPhone ? `☎️ ${item.shopPhone}` : ""}
 
 ━━━━━━━━━━━━
 
-🛒 *Bought a phone from one of these stores?*
-Earn upto ₹2000 cashback!
+💰 *Earn upto ₹1000 cashback!*
+Bought a phone from one of these stores?
 
-Just send a photo of your purchase bill here and our team will process your cashback within 24 hours. 💰`;
+📸 Simply send a photo of your purchase bill here and we'll process your cashback within 24 hours!
+
+Don't miss out — your cashback is waiting! 🎉`;
 
   if (results.length > 10) {
     response +=

@@ -117,6 +117,9 @@ We'll help you find the nearest Gurgaon stores that have your required phone ava
 ✅ Save Time & Fuel
 ✅ Free to Use
 
+💰 *Earn upto ₹1000 cashback* on your phone purchase!
+Simply buy from a store we suggest and share your bill with us.
+
 Select your area below to get started 👇`,
   "Select Zone",
   zoneNames
@@ -181,6 +184,9 @@ We'll help you find the nearest Gurgaon stores that have your required phone ava
 ✅ Nearby Store Details
 ✅ Save Time & Fuel
 ✅ Free to Use
+
+💰 *Earn upto ₹1000 cashback* on your phone purchase!
+Simply buy from a store we suggest and share your bill with us.
 
 Select your area below to get started 👇`,
   "Select Zone",
