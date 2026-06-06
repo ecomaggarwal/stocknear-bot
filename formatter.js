@@ -1,7 +1,3 @@
-const {
-  formatDistance
-} = require("./locationHelper");
-
 function formatResults(results) {
 
   if (!results.length) {
@@ -39,14 +35,10 @@ Or type your requirement again 🔍`
     .slice(0, 10)
     .forEach((item, index) => {
 
-      const distanceText =
-        formatDistance(item.distanceKm);
-
       response +=
 `${index + 1}. 🏪 ${item.shopName}
 
-${item.freshness}
-${distanceText ? `📏 ${distanceText}\n` : ""}📍 ${item.location}
+📍 ${item.location}
 
 📍 View Shop Location:
 ${item.mapsLink}
