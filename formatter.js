@@ -21,11 +21,9 @@ Or type your requirement again 🔍`
 
   response +=
 `✅ We found nearby stores matching your selection.
-Please call the store before visiting.
-📍 Availability was recently verified.
-🛡️ Covered under our ₹100 Stock Confidence Promise.*
 
-⚡ Availability changes throughout the day. We recommend contacting the store before visiting.
+⚡ Availability changes throughout the day.
+📞 Please call the store before visiting.
 
 ━━━━━━━━━━━━
 

@@ -117,9 +117,6 @@ We'll help you find the nearest Gurgaon stores that have your required phone ava
 ✅ Save Time & Fuel
 ✅ Free to Use
 
-🛡️ Stock Confidence Promise
-If we confirm a phone is available at a store and you visit but the phone is not available, we'll compensate you with ₹100.*
-
 Select your area below to get started 👇`,
   "Select Zone",
   zoneNames
@@ -184,9 +181,6 @@ We'll help you find the nearest Gurgaon stores that have your required phone ava
 ✅ Nearby Store Details
 ✅ Save Time & Fuel
 ✅ Free to Use
-
-🛡️ Stock Confidence Promise
-If we confirm a phone is available at a store and you visit but the phone is not available, we'll compensate you with ₹100.*
 
 Select your area below to get started 👇`,
   "Select Zone",
