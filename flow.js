@@ -34,7 +34,7 @@ function getPage(items, page, moreLabel) {
 async function showBrandList(phone, session, sendListMessage, saveSession) {
   const allBrands = await getBrands();
   session.step = "brand_select";
-  session.brandPage = 0;
+session.data.brandPage = 0;
   await saveSession(phone, session);
 
   const options = getPage(allBrands, 0, "View More Brands");
@@ -255,8 +255,8 @@ async function handleFlow(phone, text, sendMessage, sendListMessage) {
 
     // Handle pagination
     if (selectedBrand === "View More Brands") {
-      const nextPage = (session.brandPage || 0) + 1;
-      session.brandPage = nextPage;
+  const nextPage = (session.data.brandPage || 0) + 1;
+  session.data.brandPage = nextPage;
       await saveSession(phone, session);
 
       const options = getPage(allBrands, nextPage, "View More Brands");
@@ -270,8 +270,7 @@ async function handleFlow(phone, text, sendMessage, sendListMessage) {
     }
 
     session.data.brand = selectedBrand;
-    session.brandPage = 0;
-    session.modelPage = 0;
+session.data.modelPage = 0;
 
     const models = await getModels(selectedBrand);
     session.step = "model_select";
@@ -292,14 +291,14 @@ async function handleFlow(phone, text, sendMessage, sendListMessage) {
 
     // Handle pagination
     if (selectedModel === "View More Models") {
-      const nextPage = (session.modelPage || 0) + 1;
-      session.modelPage = nextPage;
-      await saveSession(phone, session);
+  const nextPage = (session.data.modelPage || 0) + 1;
+  session.data.modelPage = nextPage;
+  await saveSession(phone, session);
 
-      const options = getPage(models, nextPage, "View More Models");
-      await sendListMessage(phone, "Choose Model", "Select Model", options);
-      return;
-    }
+  const options = getPage(models, nextPage, "View More Models");
+  await sendListMessage(phone, "Choose Model", "Select Model", options);
+  return;
+}
 
     if (!models.includes(selectedModel)) {
       await sendMessage(phone, "Invalid model.");
@@ -307,7 +306,7 @@ async function handleFlow(phone, text, sendMessage, sendListMessage) {
     }
 
     session.data.model = selectedModel;
-    session.modelPage = 0;
+session.data.modelPage = 0;
 
     const ramOptions = await getRam(session.data.brand, session.data.model);
     session.step = "ram_select";
