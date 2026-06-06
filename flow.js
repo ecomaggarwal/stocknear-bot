@@ -250,15 +250,22 @@ async function handleFlow(phone, text, sendMessage, sendListMessage) {
     const selectedBrand = text;
 
     // Handle "View More Brands"
-    if (selectedBrand === "View More Brands") {
-      await sendListMessage(
-        phone,
-        "📱 Choose Brand",
-        "Select Brand",
-        session.secondaryBrands || []
-      );
-      return;
-    }
+if (selectedBrand === "View More Brands") {
+  const { secondary } = await getBrands();
+
+  if (!secondary || secondary.length === 0) {
+    await sendMessage(phone, "No more brands available.");
+    return;
+  }
+
+  await sendListMessage(
+    phone,
+    "📱 More Brands",
+    "Select Brand",
+    secondary
+  );
+  return;
+}
 
     const allBrands = [
       ...(session.primaryBrands || []),
