@@ -1,16 +1,10 @@
 const { getInventory } = require("./sheets");
 
-// Primary brands shown first (max 9)
+const PAGE_SIZE = 9;
+
 const PRIMARY_BRANDS = [
-  "Samsung",
-  "Apple",
-  "OnePlus",
-  "Realme",
-  "Vivo",
-  "Oppo",
-  "Motorola",
-  "Nokia",
-  "Google"
+  "Samsung", "Apple", "OnePlus", "Realme",
+  "Vivo", "Oppo", "Motorola", "Nokia", "Google"
 ];
 
 function normalize(value) {
@@ -29,30 +23,46 @@ function uniqueValues(array) {
 
 async function getBrands() {
   const inventory = await getInventory();
-
-  const allBrands = uniqueValues(
-    inventory.map(item => item.brand)
-  );
-
-  return allBrands;
+  return uniqueValues(inventory.map(item => item.brand));
 }
 
-async function getModels(brand) {
+async function getSeries(brand) {
   const inventory = await getInventory();
-
-  const models = inventory
+  const series = inventory
     .filter(item => normalize(item.brand) === normalize(brand))
-    .map(item => item.model);
-
-  return [...uniqueValues(models), "Any Model"];
+    .map(item => item.series);
+  return [...uniqueValues(series), "Any Series"];
 }
 
-async function getRam(brand, model) {
+async function getModels(brand, series) {
   const inventory = await getInventory();
 
   let filtered = inventory.filter(
     item => normalize(item.brand) === normalize(brand)
   );
+
+  if (series && series !== "Any Series") {
+    filtered = filtered.filter(
+      item => normalize(item.series) === normalize(series)
+    );
+  }
+
+  const models = filtered.map(item => item.model);
+  return [...uniqueValues(models), "Any Model"];
+}
+
+async function getRam(brand, series, model) {
+  const inventory = await getInventory();
+
+  let filtered = inventory.filter(
+    item => normalize(item.brand) === normalize(brand)
+  );
+
+  if (series && series !== "Any Series") {
+    filtered = filtered.filter(
+      item => normalize(item.series) === normalize(series)
+    );
+  }
 
   if (model !== "Any Model") {
     filtered = filtered.filter(
@@ -61,16 +71,21 @@ async function getRam(brand, model) {
   }
 
   const ramOptions = filtered.map(item => item.ram);
-
   return [...uniqueValues(ramOptions), "Any RAM"];
 }
 
-async function getStorage(brand, model, ram) {
+async function getStorage(brand, series, model, ram) {
   const inventory = await getInventory();
 
   let filtered = inventory.filter(
     item => normalize(item.brand) === normalize(brand)
   );
+
+  if (series && series !== "Any Series") {
+    filtered = filtered.filter(
+      item => normalize(item.series) === normalize(series)
+    );
+  }
 
   if (model !== "Any Model") {
     filtered = filtered.filter(
@@ -85,16 +100,21 @@ async function getStorage(brand, model, ram) {
   }
 
   const storageOptions = filtered.map(item => item.storage);
-
   return [...uniqueValues(storageOptions), "Any Storage"];
 }
 
-async function getColors(brand, model, ram, storage) {
+async function getColors(brand, series, model, ram, storage) {
   const inventory = await getInventory();
 
   let filtered = inventory.filter(
     item => normalize(item.brand) === normalize(brand)
   );
+
+  if (series && series !== "Any Series") {
+    filtered = filtered.filter(
+      item => normalize(item.series) === normalize(series)
+    );
+  }
 
   if (model !== "Any Model") {
     filtered = filtered.filter(
@@ -115,11 +135,10 @@ async function getColors(brand, model, ram, storage) {
   }
 
   const colors = filtered.map(item => item.color);
-
   return [...uniqueValues(colors), "Any Color"];
 }
 
-async function searchInventory({ brand, model, ram, storage, color }) {
+async function searchInventory({ brand, series, model, ram, storage, color }) {
   const inventory = await getInventory();
 
   let filtered = inventory.filter(
@@ -127,6 +146,12 @@ async function searchInventory({ brand, model, ram, storage, color }) {
       normalize(item.brand) === normalize(brand) &&
       item.stock > 0
   );
+
+  if (series && series !== "Any Series") {
+    filtered = filtered.filter(
+      item => normalize(item.series) === normalize(series)
+    );
+  }
 
   if (model !== "Any Model") {
     filtered = filtered.filter(
@@ -163,10 +188,8 @@ async function searchInventory({ brand, model, ram, storage, color }) {
     const freshnessDiff =
       (freshnessScore[b.freshness] || 0) - (freshnessScore[a.freshness] || 0);
     if (freshnessDiff !== 0) return freshnessDiff;
-
     const stockDiff = b.stock - a.stock;
     if (stockDiff !== 0) return stockDiff;
-
     return a.price - b.price;
   });
 
@@ -175,10 +198,10 @@ async function searchInventory({ brand, model, ram, storage, color }) {
 
 module.exports = {
   getBrands,
+  getSeries,
   getModels,
   getRam,
   getStorage,
   getColors,
-  searchInventory,
-  PRIMARY_BRANDS
+  searchInventory
 };
