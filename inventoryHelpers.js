@@ -40,7 +40,8 @@ async function getSeries(category, brand) {
       normalize(item.brand) === normalize(brand)
   );
   const series = filtered.map(item => item.series);
-  return [...uniqueValues(series), "Any Series"];
+  const uniqueSeries = uniqueValues(series);
+return uniqueSeries.length > 1 ? [...uniqueSeries, "Any Series"] : uniqueSeries;
 }
 
 async function getModels(category, brand, series) {
@@ -59,7 +60,8 @@ async function getModels(category, brand, series) {
   }
 
   const models = filtered.map(item => item.model);
-  return [...uniqueValues(models), "Any Model"];
+  const uniqueModels = uniqueValues(models);
+return uniqueModels.length > 1 ? [...uniqueModels, "Any Model"] : uniqueModels;
 }
 
 async function getRam(category, brand, series, model) {
@@ -84,7 +86,8 @@ async function getRam(category, brand, series, model) {
   }
 
   const ramOptions = filtered.map(item => item.ram);
-  return [...uniqueValues(ramOptions), "Any RAM"];
+  const uniqueRam = uniqueValues(ramOptions);
+return uniqueRam.length > 1 ? [...uniqueRam, "Any RAM"] : uniqueRam;
 }
 
 async function getStorage(category, brand, series, model, ram) {
@@ -115,7 +118,8 @@ async function getStorage(category, brand, series, model, ram) {
   }
 
   const storageOptions = filtered.map(item => item.storage);
-  return [...uniqueValues(storageOptions), "Any Storage"];
+  const uniqueStorage = uniqueValues(storageOptions);
+return uniqueStorage.length > 1 ? [...uniqueStorage, "Any Storage"] : uniqueStorage;
 }
 
 async function getColors(category, brand, series, model, ram, storage) {
@@ -152,7 +156,8 @@ async function getColors(category, brand, series, model, ram, storage) {
   }
 
   const colors = filtered.map(item => item.color);
-  return [...uniqueValues(colors), "Any Color"];
+  const uniqueColors = uniqueValues(colors);
+return uniqueColors.length > 1 ? [...uniqueColors, "Any Color"] : uniqueColors;
 }
 
 async function searchInventory({
