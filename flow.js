@@ -1,6 +1,10 @@
 const { saveLead } = require("./leads");
 const { getRecommendations } = require("./recommendations");
-const { getBrands, getSeries, getModels, getRam, getStorage, getColors, searchInventory } = require("./inventoryHelpers");
+const {
+  getCategories, getBrands, getSeries, getModels,
+  getRam, getStorage, getColors, searchInventory,
+  NO_RAM_STORAGE_CATEGORIES
+} = require("./inventoryHelpers");
 const { formatResults } = require("./formatter");
 const { smartSearch } = require("./smartSearch");
 const { getNextStep } = require("./steps");
@@ -29,10 +33,18 @@ function getPage(items, page, moreLabel) {
   return hasMore ? [...slice, moreLabel] : slice;
 }
 
+// ── HELPER — Check if category needs RAM/Storage ──────────────────────────────
+
+function needsRamStorage(category) {
+  return !NO_RAM_STORAGE_CATEGORIES.some(
+    c => c.toLowerCase() === category.toLowerCase()
+  );
+}
+
 // ── HELPER — Show brand list ──────────────────────────────────────────────────
 
 async function showBrandList(phone, session, sendListMessage, saveSession) {
-  const allBrands = await getBrands();
+  const allBrands = await getBrands(session.data.category);
   session.step = "brand_select";
   session.data.brandPage = 0;
   await saveSession(phone, session);
@@ -40,6 +52,24 @@ async function showBrandList(phone, session, sendListMessage, saveSession) {
   const options = getPage(allBrands, 0, "View More Brands");
   await sendListMessage(phone, "📱 Which brand are you looking for?", "Select Brand", options);
 }
+
+// ── WELCOME MESSAGE ───────────────────────────────────────────────────────────
+
+const WELCOME_MESSAGE = `👋 Welcome to Gurgaon Phone Finder
+
+📱 Looking for a phone but can't find it in nearby stores?
+
+We'll help you find the nearest Gurgaon stores that have your required phone available.
+
+✅ Verified Store Contacts
+✅ Nearby Store Details
+✅ Save Time & Fuel
+✅ Free to Use
+
+💰 *Earn upto ₹1000 cashback* on your phone purchase!
+Simply buy from a store we suggest and share your bill with us.
+
+Select your area below to get started 👇`;
 
 // ── MAIN FLOW ─────────────────────────────────────────────────────────────────
 
@@ -104,26 +134,7 @@ async function handleFlow(phone, text, sendMessage, sendListMessage) {
     await sendMessage(phone, "✅ Search restarted.");
 
     const zoneNames = ZONES.map(z => z.zone);
-    await sendListMessage(
-      phone,
-      `👋 Welcome to Gurgaon Phone Finder
-
-📱 Looking for a phone but can't find it in nearby stores?
-
-We'll help you find the nearest Gurgaon stores that have your required phone available.
-
-✅ Verified Store Contacts
-✅ Nearby Store Details
-✅ Save Time & Fuel
-✅ Free to Use
-
-💰 *Earn upto ₹1000 cashback* on your phone purchase!
-Simply buy from a store we suggest and share your bill with us.
-
-Select your area below to get started 👇`,
-      "Select Zone",
-      zoneNames
-    );
+    await sendListMessage(phone, WELCOME_MESSAGE, "Select Zone", zoneNames);
     return;
   }
 
@@ -172,26 +183,7 @@ Select your area below to get started 👇`,
       }
     }
 
-    await sendListMessage(
-      phone,
-      `👋 Welcome to Gurgaon Phone Finder
-
-📱 Looking for a phone but can't find it in nearby stores?
-
-We'll help you find the nearest Gurgaon stores that have your required phone available.
-
-✅ Verified Store Contacts
-✅ Nearby Store Details
-✅ Save Time & Fuel
-✅ Free to Use
-
-💰 *Earn upto ₹1000 cashback* on your phone purchase!
-Simply buy from a store we suggest and share your bill with us.
-
-Select your area below to get started 👇`,
-      "Select Zone",
-      zoneNames
-    );
+    await sendListMessage(phone, WELCOME_MESSAGE, "Select Zone", zoneNames);
     session.step = "zone_select";
     await saveSession(phone, session);
     return;
@@ -224,17 +216,43 @@ Select your area below to get started 👇`,
       lng: coords ? coords.lng : null
     };
 
+    session.step = "category_select";
     await saveSession(phone, session);
 
     await sendMessage(
       phone,
       `📍 Area Selected: *${matchedArea}*
 
-Great! Now let's find your phone.
-Choose your preferred brand below 👇
-
-⚡ We'll show nearby stores based on your location.`
+Great! Now let's find what you're looking for.
+Choose a category below 👇`
     );
+
+    // Show category list
+    const categories = await getCategories();
+    await sendListMessage(
+      phone,
+      "🛍️ What are you looking for?",
+      "Select Category",
+      categories
+    );
+    return;
+  }
+
+  // ── CATEGORY SELECT ───────────────────────────────────────────────────────
+
+  if (session.step === "category_select") {
+
+    const categories = await getCategories();
+    const selectedCategory = text;
+
+    if (!categories.includes(selectedCategory)) {
+      await sendMessage(phone, "Invalid category. Please select from the list.");
+      return;
+    }
+
+    session.data.category = selectedCategory;
+    session.step = "brand_select";
+    await saveSession(phone, session);
 
     await showBrandList(phone, session, sendListMessage, saveSession);
     return;
@@ -284,7 +302,7 @@ Choose your preferred brand below 👇
   if (session.step === "brand_select") {
 
     const selectedBrand = text;
-    const allBrands = await getBrands();
+    const allBrands = await getBrands(session.data.category);
 
     if (selectedBrand === "View More Brands") {
       const nextPage = (session.data.brandPage || 0) + 1;
@@ -306,10 +324,10 @@ Choose your preferred brand below 👇
 
     await saveSession(phone, session);
 
-    const seriesOptions = await getSeries(selectedBrand);
+    const seriesOptions = await getSeries(session.data.category, selectedBrand);
     await sendListMessage(
       phone,
-      `📱 Which ${selectedBrand} series are you looking for?`,
+      `Which ${selectedBrand} series are you looking for?`,
       "Select Series",
       seriesOptions
     );
@@ -321,7 +339,7 @@ Choose your preferred brand below 👇
   if (session.step === "series_select") {
 
     const selectedSeries = text;
-    const seriesOptions = await getSeries(session.data.brand);
+    const seriesOptions = await getSeries(session.data.category, session.data.brand);
 
     if (!seriesOptions.includes(selectedSeries)) {
       await sendMessage(phone, "Invalid series. Please select from the list.");
@@ -334,7 +352,7 @@ Choose your preferred brand below 👇
 
     await saveSession(phone, session);
 
-    const models = await getModels(session.data.brand, selectedSeries);
+    const models = await getModels(session.data.category, session.data.brand, selectedSeries);
     const modelOptions = getPage(models, 0, "View More Models");
     await sendListMessage(phone, "Choose Model", "Select Model", modelOptions);
     return;
@@ -345,7 +363,7 @@ Choose your preferred brand below 👇
   if (session.step === "model_select") {
 
     const selectedModel = text;
-    const models = await getModels(session.data.brand, session.data.series);
+    const models = await getModels(session.data.category, session.data.brand, session.data.series);
 
     if (selectedModel === "View More Models") {
       const nextPage = (session.data.modelPage || 0) + 1;
@@ -364,11 +382,31 @@ Choose your preferred brand below 👇
     session.data.model = selectedModel;
     session.data.modelPage = 0;
 
-    const ramOptions = await getRam(session.data.brand, session.data.series, session.data.model);
+    // Check if category needs RAM/Storage
+    if (!needsRamStorage(session.data.category)) {
+      // Skip RAM/Storage — go straight to color
+      const colorOptions = await getColors(
+        session.data.category,
+        session.data.brand,
+        session.data.series,
+        session.data.model,
+        null,
+        null
+      );
+      session.step = "color_select";
+      await saveSession(phone, session);
+      await sendListMessage(phone, "Choose Color", "Select Color", colorOptions);
+      return;
+    }
+
+    const ramOptions = await getRam(
+      session.data.category,
+      session.data.brand,
+      session.data.series,
+      session.data.model
+    );
     session.step = "ram_select";
-
     await saveSession(phone, session);
-
     await sendListMessage(phone, "Choose RAM", "Select RAM", ramOptions);
     return;
   }
@@ -377,7 +415,12 @@ Choose your preferred brand below 👇
 
   if (session.step === "ram_select") {
 
-    const ramOptions = await getRam(session.data.brand, session.data.series, session.data.model);
+    const ramOptions = await getRam(
+      session.data.category,
+      session.data.brand,
+      session.data.series,
+      session.data.model
+    );
     const selectedRam = text;
 
     if (!ramOptions.includes(selectedRam)) {
@@ -388,6 +431,7 @@ Choose your preferred brand below 👇
     session.data.ram = selectedRam;
 
     const storageOptions = await getStorage(
+      session.data.category,
       session.data.brand,
       session.data.series,
       session.data.model,
@@ -396,7 +440,6 @@ Choose your preferred brand below 👇
 
     session.step = "storage_select";
     await saveSession(phone, session);
-
     await sendListMessage(phone, "Choose Storage", "Select Storage", storageOptions);
     return;
   }
@@ -406,6 +449,7 @@ Choose your preferred brand below 👇
   if (session.step === "storage_select") {
 
     const storageOptions = await getStorage(
+      session.data.category,
       session.data.brand,
       session.data.series,
       session.data.model,
@@ -422,6 +466,7 @@ Choose your preferred brand below 👇
     session.data.storage = selectedStorage;
 
     const colorOptions = await getColors(
+      session.data.category,
       session.data.brand,
       session.data.series,
       session.data.model,
@@ -431,7 +476,6 @@ Choose your preferred brand below 👇
 
     session.step = "color_select";
     await saveSession(phone, session);
-
     await sendListMessage(phone, "Choose Color", "Select Color", colorOptions);
     return;
   }
@@ -441,11 +485,12 @@ Choose your preferred brand below 👇
   if (session.step === "color_select") {
 
     const colorOptions = await getColors(
+      session.data.category,
       session.data.brand,
       session.data.series,
       session.data.model,
-      session.data.ram,
-      session.data.storage
+      session.data.ram || null,
+      session.data.storage || null
     );
 
     const selectedColor = text;
@@ -468,11 +513,12 @@ Choose your preferred brand below 👇
     });
 
     const results = await searchInventory({
+      category: session.data.category,
       brand: session.data.brand,
       series: session.data.series,
       model: session.data.model,
-      ram: session.data.ram,
-      storage: session.data.storage,
+      ram: session.data.ram || null,
+      storage: session.data.storage || null,
       color: session.data.color
     });
 
@@ -488,6 +534,7 @@ Choose your preferred brand below 👇
 }
 
 module.exports = {
+  getCategories,
   getBrands,
   getSeries,
   getModels,

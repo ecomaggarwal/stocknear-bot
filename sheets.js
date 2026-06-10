@@ -31,22 +31,24 @@ async function getInventory() {
     inventoryCache = rows.map(row => ({
       shopId:      row.c[0]?.v  || "",
       shopName:    row.c[1]?.v  || "",
-      brand:       row.c[2]?.v  || "",
-      series:      row.c[3]?.v  || "",   // NEW
-      model:       row.c[4]?.v  || "",   // shifted
-      ram:         row.c[5]?.v  || "",   // shifted
-      storage:     row.c[6]?.v  || "",   // shifted
-      color:       row.c[7]?.v  || "",   // shifted
-      price:       row.c[8]?.v  || 0,    // shifted
-      stock:       row.c[9]?.v  || 0,    // shifted
-      available:   row.c[10]?.v || "",   // shifted
-      lastUpdated: row.c[11]?.v || "",   // shifted
-      freshness:   row.c[12]?.v || "",   // shifted
-      location:    row.c[13]?.v || "",   // shifted
-      mapsLink:    row.c[14]?.v || "",   // shifted
-      shopPhone:   row.c[15]?.v || "",   // shifted
-      shopLat:     row.c[16]?.v || null, // shifted
-      shopLng:     row.c[17]?.v || null  // shifted
+      category:    row.c[2]?.v  || "",   // NEW
+      brand:       row.c[3]?.v  || "",   // shifted
+      series:      row.c[4]?.v  || "",   // shifted
+      model:       row.c[5]?.v  || "",   // shifted
+      ram:         row.c[6]?.v  || "",   // shifted
+      storage:     row.c[7]?.v  || "",   // shifted
+      color:       row.c[8]?.v  || "",   // shifted
+      price:       row.c[9]?.v  || 0,    // shifted
+      stock:       row.c[10]?.v || 0,    // shifted
+      available:   row.c[11]?.v || "",   // shifted
+      lastUpdated: row.c[12]?.v || "",   // shifted
+      freshness:   row.c[13]?.v || "",   // shifted
+      location:    row.c[14]?.v || "",   // shifted
+      mapsLink:    row.c[15]?.v || "",   // shifted
+      shopPhone:   row.c[16]?.v || "",   // shifted
+      shopLat:     row.c[17]?.v || null, // shifted
+      shopLng:     row.c[18]?.v || null, // shifted
+      itemCode:    row.c[19]?.v || ""    // shifted
     }));
 
     lastFetchTime = Date.now();
