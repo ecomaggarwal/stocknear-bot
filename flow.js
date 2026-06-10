@@ -400,15 +400,71 @@ Choose a category below 👇`
     }
 
     const ramOptions = await getRam(
+  session.data.category,
+  session.data.brand,
+  session.data.series,
+  session.data.model
+);
+
+// Skip RAM if empty
+const realRamOptions = ramOptions.filter(r => r !== "Any RAM");
+if (!realRamOptions.length) {
+  session.data.ram = "Any RAM";
+  const storageOptions = await getStorage(
+    session.data.category,
+    session.data.brand,
+    session.data.series,
+    session.data.model,
+    "Any RAM"
+  );
+
+  const realStorageOptions = storageOptions.filter(s => s !== "Any Storage");
+  if (!realStorageOptions.length) {
+    session.data.storage = "Any Storage";
+    const colorOptions = await getColors(
       session.data.category,
       session.data.brand,
       session.data.series,
-      session.data.model
+      session.data.model,
+      null,
+      null
     );
-    session.step = "ram_select";
+    const realColorOptions = colorOptions.filter(c => c !== "Any Color");
+    if (!realColorOptions.length) {
+      // No filters needed — search directly
+      session.data.color = "Any Color";
+      const results = await searchInventory({
+        category: session.data.category,
+        brand: session.data.brand,
+        series: session.data.series,
+        model: session.data.model,
+        ram: null,
+        storage: null,
+        color: "Any Color"
+      });
+      const sorted = applyLocationSort(results, session);
+      const formatted = formatResults(sorted);
+      await sendMessage(phone, formatted);
+      session.step = "done";
+      await saveSession(phone, session);
+      return;
+    }
+    session.step = "color_select";
     await saveSession(phone, session);
-    await sendListMessage(phone, "Choose RAM", "Select RAM", ramOptions);
+    await sendListMessage(phone, "Choose Color", "Select Color", colorOptions);
     return;
+  }
+
+  session.step = "storage_select";
+  await saveSession(phone, session);
+  await sendListMessage(phone, "Choose Storage", "Select Storage", storageOptions);
+  return;
+}
+
+session.step = "ram_select";
+await saveSession(phone, session);
+await sendListMessage(phone, "Choose RAM", "Select RAM", ramOptions);
+return;
   }
 
   // ── RAM SELECT ────────────────────────────────────────────────────────────
@@ -430,18 +486,36 @@ Choose a category below 👇`
 
     session.data.ram = selectedRam;
 
-    const storageOptions = await getStorage(
-      session.data.category,
-      session.data.brand,
-      session.data.series,
-      session.data.model,
-      session.data.ram
-    );
+const storageOptions = await getStorage(
+  session.data.category,
+  session.data.brand,
+  session.data.series,
+  session.data.model,
+  session.data.ram
+);
 
-    session.step = "storage_select";
-    await saveSession(phone, session);
-    await sendListMessage(phone, "Choose Storage", "Select Storage", storageOptions);
-    return;
+// Skip Storage if empty
+const realStorageOptions = storageOptions.filter(s => s !== "Any Storage");
+if (!realStorageOptions.length) {
+  session.data.storage = "Any Storage";
+  const colorOptions = await getColors(
+    session.data.category,
+    session.data.brand,
+    session.data.series,
+    session.data.model,
+    session.data.ram,
+    null
+  );
+  session.step = "color_select";
+  await saveSession(phone, session);
+  await sendListMessage(phone, "Choose Color", "Select Color", colorOptions);
+  return;
+}
+
+session.step = "storage_select";
+await saveSession(phone, session);
+await sendListMessage(phone, "Choose Storage", "Select Storage", storageOptions);
+return;
   }
 
   // ── STORAGE SELECT ────────────────────────────────────────────────────────
@@ -465,19 +539,40 @@ Choose a category below 👇`
 
     session.data.storage = selectedStorage;
 
-    const colorOptions = await getColors(
-      session.data.category,
-      session.data.brand,
-      session.data.series,
-      session.data.model,
-      session.data.ram,
-      session.data.storage
-    );
+const colorOptions = await getColors(
+  session.data.category,
+  session.data.brand,
+  session.data.series,
+  session.data.model,
+  session.data.ram,
+  session.data.storage
+);
 
-    session.step = "color_select";
-    await saveSession(phone, session);
-    await sendListMessage(phone, "Choose Color", "Select Color", colorOptions);
-    return;
+// Skip Color if empty
+const realColorOptions = colorOptions.filter(c => c !== "Any Color");
+if (!realColorOptions.length) {
+  session.data.color = "Any Color";
+  const results = await searchInventory({
+    category: session.data.category,
+    brand: session.data.brand,
+    series: session.data.series,
+    model: session.data.model,
+    ram: session.data.ram,
+    storage: session.data.storage,
+    color: "Any Color"
+  });
+  const sorted = applyLocationSort(results, session);
+  const formatted = formatResults(sorted);
+  await sendMessage(phone, formatted);
+  session.step = "done";
+  await saveSession(phone, session);
+  return;
+}
+
+session.step = "color_select";
+await saveSession(phone, session);
+await sendListMessage(phone, "Choose Color", "Select Color", colorOptions);
+return;
   }
 
   // ── COLOR SELECT ──────────────────────────────────────────────────────────
