@@ -173,6 +173,11 @@ app.post("/webhook", async (req, res) => {
         imageUrl: imageUrl
       });
 
+      await sendMessage(
+  "918882077169",
+  `📸 Bill photo received from: +${from}`
+);
+
       await forwardBillToOwner(imageId, from);
 
       await sendMessage(
@@ -216,7 +221,19 @@ Customers will now see your inventory as verified. 🙂`
 }
 
     console.log("Message from:", from);
-    console.log("Text:", text);
+console.log("Text:", text);
+
+// ── FORWARD ALL MESSAGES TO OWNER ─────────────────────────────────────────
+try {
+  if (text) {
+    await sendMessage(
+      "918882077169",
+      `📩 New message from: +${from}\n\n"${text}"`
+    );
+  }
+} catch (err) {
+  console.log("Forward error:", err.message);
+}
 
     try {
       await handleFlow(from, text, sendMessage, sendListMessage);
