@@ -133,6 +133,11 @@ app.get("/send-test", async (req, res) => {
   res.send("Message sent");
 });
 
+app.get("/test-reminder", async (req, res) => {
+  await sendRemindersToAll();
+  res.send("Reminders sent!");
+});
+
 app.get("/webhook", (req, res) => {
   const mode = req.query["hub.mode"];
   const token = req.query["hub.verify_token"];
